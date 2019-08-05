@@ -9,3 +9,7 @@ Build
 #cmake ..
 #make
 ```
+Run
+```
+#./findcylinder 0.2 0.3 0.0001 0.03
+```
