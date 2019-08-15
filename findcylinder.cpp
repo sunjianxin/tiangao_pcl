@@ -18,10 +18,57 @@
 #include <pcl/kdtree/kdtree.h>
 #include <fstream>
 //#indlude <>
+//
+#define OFFSET 0.02
 
 using namespace std;
 
 typedef pcl::PointXYZ PointT;
+
+float getPoint2LineDistance(float x, float y, float z, float line_org_x, float line_org_y, float line_org_z, float line_dir_x, float line_dir_y, float line_dir_z) {
+  // get vector from line org to point as diff vector
+  float x_diff = x - line_org_x;
+  float y_diff = y - line_org_y;
+  float z_diff = z - line_org_z;
+  // get outer product of diff vector and line, and get its norm
+  float norm = sqrt(pow(x_diff*line_dir_y-y_diff*line_dir_x, 2) + 
+               pow(z_diff*line_dir_x-x_diff*line_dir_z, 2) +
+               pow(y_diff*line_dir_z-z_diff*line_dir_y, 2));
+  
+  // get point to line distance
+  return norm/sqrt(pow(line_dir_x, 2) + pow(line_dir_y, 2) + pow(line_dir_z, 2));
+}
+
+void getStemPC(pcl::PointCloud<PointT>::Ptr org_cloud, pcl::PointCloud<PointT>::Ptr stem_cloud, pcl::PointCloud<PointT>::Ptr rest_cloud, pcl::ModelCoefficients::Ptr coefficients_cylinder, float offset) {
+  int count_stem = 0;
+  int count_rest = 0;
+  for (int i = 0; i < org_cloud->points.size(); ++i){
+    if (getPoint2LineDistance(org_cloud->points[i].x,
+                              org_cloud->points[i].y,
+                              org_cloud->points[i].z,
+                              coefficients_cylinder->values[0],
+                              coefficients_cylinder->values[1],
+                              coefficients_cylinder->values[2],
+                              coefficients_cylinder->values[3],
+                              coefficients_cylinder->values[4],
+                              coefficients_cylinder->values[5]
+                              ) > (coefficients_cylinder->values[6] + offset)){
+      stem_cloud->points.push_back(org_cloud->points[i]);
+      count_stem ++;
+    } else {
+      rest_cloud->points.push_back(org_cloud->points[i]);
+      count_rest ++;
+    }
+  }
+  std::cout << "count_stem: " << count_stem << std::endl;
+  std::cout << "count_rest: " << count_rest << std::endl;
+  stem_cloud->width = count_stem;
+  rest_cloud->width = count_rest;
+  stem_cloud->height = 1;
+  rest_cloud->height = 1;
+  stem_cloud->points.resize(count_stem);
+  rest_cloud->points.resize(count_rest);
+}
 
 int
 main (int argc, char *argv[])
@@ -315,6 +362,24 @@ main (int argc, char *argv[])
   pcl::PointCloud<PointT>::Ptr cloud_new (new pcl::PointCloud<PointT>);
   pcl::transformPointCloud (*cloud, *cloud_new, transform_1);
 
+  //transform the starting point of the cylinder model
+  pcl::PointCloud<PointT>::Ptr cyl_start_point (new pcl::PointCloud<PointT>);
+  //std::vector<PointT, Eigen::aligned_allocator<PointT>> start_point;
+  PointT start_point;
+  start_point.x = coefficients_cylinder_1->values[0];
+  start_point.y = coefficients_cylinder_1->values[1];
+  start_point.z = coefficients_cylinder_1->values[2];
+
+  cyl_start_point->points.push_back(start_point);
+  cyl_start_point->width = 1;
+  cyl_start_point->height = 1;
+  cyl_start_point->points.resize(1);
+  std::cout << "cyl point transform: " << cyl_start_point->points[0] << std::endl;
+  pcl::PointCloud<PointT>::Ptr new_cyl_start_point (new pcl::PointCloud<PointT>);
+  pcl::transformPointCloud (*cyl_start_point, *new_cyl_start_point, transform_1);
+  std::cout << "cyl point transform: " << new_cyl_start_point->points[0] << std::endl;
+
+
   //pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> transformed_cloud_color_handler (cloud_new, 0, 255, 0); // Red
   //viewer->addPointCloud (cloud_new, transformed_cloud_color_handler, "transformed_cloud");
 
@@ -336,9 +401,42 @@ main (int argc, char *argv[])
   //Saved the final pcd file
   writer.write("rotPlant_reorientated.pcd", *cloud_new, false);
 
+  //get PC of the stem
+  std::cout << "1" << std::endl;
+  pcl::ModelCoefficients::Ptr cylinder_coeff_tran (new pcl::ModelCoefficients);
+  std::cout << "2" << std::endl;
+  cylinder_coeff_tran->values.resize (7);    // We need 7 values
+  std::cout << "3" << std::endl;
+  cylinder_coeff_tran->values[0] = new_cyl_start_point->points[0].x;
+  cylinder_coeff_tran->values[1] = new_cyl_start_point->points[0].y;
+  cylinder_coeff_tran->values[2] = new_cyl_start_point->points[0].z;
+  cylinder_coeff_tran->values[3] = 0;
+  cylinder_coeff_tran->values[4] = 0;
+  cylinder_coeff_tran->values[5] = 1;
+  cylinder_coeff_tran->values[6] = 0.01;
+  
+  std::cout << "before" << endl;
+  viewer->addCylinder(*cylinder_coeff_tran, "test");
+  std::cout << "after" << endl;
+
+  pcl::PointCloud<PointT>::Ptr stem_cloud (new pcl::PointCloud<PointT>);
+  pcl::PointCloud<PointT>::Ptr rest_cloud (new pcl::PointCloud<PointT>);
+  getStemPC(cloud_new, stem_cloud, rest_cloud, cylinder_coeff_tran, OFFSET);
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer_2 (new pcl::visualization::PCLVisualizer ("3D Viewer 2"));
+  viewer_2->setBackgroundColor (0, 0, 0);
+  viewer_2->addCoordinateSystem (1.0);
+  viewer_2->addCylinder(*cylinder_coeff_tran, "test");
+  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> stem_cloud_handler (stem_cloud, 255, 0, 0); // Red
+  viewer_2->addPointCloud (stem_cloud, stem_cloud_handler, "stem_cloud");
+  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> rest_cloud_handler (stem_cloud, 0, 255, 0); // Green
+  viewer_2->addPointCloud (rest_cloud, rest_cloud_handler, "rest_cloud");
+  std::cout << "size1: " << stem_cloud->size() << std::endl;
+  std::cout << "size2: " << rest_cloud->size() << std::endl;
 
   //viewer->addPointCloudNormals<pcl::PointXYZ, pcl::Normal> (layer_cloud, cloud_normals_1, 10, 0.05, "normals");
 
+  writer.write("leaf_cloud.pcd", *stem_cloud, false);
+  writer.write("stem_cloud.pcd", *rest_cloud, false);
 
 
 

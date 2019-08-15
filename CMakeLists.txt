@@ -9,4 +9,6 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 add_executable (findcylinder findcylinder.cpp)
+add_executable (getTrunkPC getTrunkPC.cpp)
 target_link_libraries (findcylinder ${PCL_LIBRARIES})
+target_link_libraries (getTrunkPC ${PCL_LIBRARIES})
