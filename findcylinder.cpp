@@ -70,6 +70,37 @@ void getStemPC(pcl::PointCloud<PointT>::Ptr org_cloud, pcl::PointCloud<PointT>::
   rest_cloud->points.resize(count_rest);
 }
 
+void getStemPC_RGB(pcl::PointCloud<pcl::PointXYZRGB>::Ptr org_cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr stem_cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr rest_cloud, pcl::ModelCoefficients::Ptr coefficients_cylinder, float offset) {
+  int count_stem = 0;
+  int count_rest = 0;
+  for (int i = 0; i < org_cloud->points.size(); ++i){
+    if (getPoint2LineDistance(org_cloud->points[i].x,
+                              org_cloud->points[i].y,
+                              org_cloud->points[i].z,
+                              coefficients_cylinder->values[0],
+                              coefficients_cylinder->values[1],
+                              coefficients_cylinder->values[2],
+                              coefficients_cylinder->values[3],
+                              coefficients_cylinder->values[4],
+                              coefficients_cylinder->values[5]
+                              ) > (coefficients_cylinder->values[6] + offset)){
+      stem_cloud->points.push_back(org_cloud->points[i]);
+      count_stem ++;
+    } else {
+      rest_cloud->points.push_back(org_cloud->points[i]);
+      count_rest ++;
+    }
+  }
+  std::cout << "count_stem: " << count_stem << std::endl;
+  std::cout << "count_rest: " << count_rest << std::endl;
+  stem_cloud->width = count_stem;
+  rest_cloud->width = count_rest;
+  stem_cloud->height = 1;
+  rest_cloud->height = 1;
+  stem_cloud->points.resize(count_stem);
+  rest_cloud->points.resize(count_rest);
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -98,6 +129,7 @@ main (int argc, char *argv[])
   pcl::search::KdTree<PointT>::Ptr tree_4 (new pcl::search::KdTree<PointT> ());
   // Datasets
   pcl::PointCloud<PointT>::Ptr cloud (new pcl::PointCloud<PointT>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb (new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::PointCloud<PointT>::Ptr rest_cloud_1 (new pcl::PointCloud<PointT>);
   pcl::PointCloud<PointT>::Ptr rest_cloud_1_filtered (new pcl::PointCloud<PointT>);
   pcl::PointCloud<PointT>::Ptr rest_cloud_2 (new pcl::PointCloud<PointT>);
@@ -127,7 +159,10 @@ main (int argc, char *argv[])
   pcl::PointXYZ basic_point;
   pcl::PointXYZRGB point;
   // Read in the cloud data
-  reader.read ("../data/rotPlant.pcd", *cloud);
+  //reader.read ("../data/rotPlant.pcd", *cloud);
+  //reader.read ("../data/rotPlant.pcd", *cloud_rgb);
+  reader.read ("../data/01_D1N3_2019-05-26.pcd", *cloud);
+  reader.read ("../data/01_D1N3_2019-05-26.pcd", *cloud_rgb);
   std::cerr << "Input PointCloud has: " << cloud->points.size () << " data points." << std::endl;
   std::cout << "data1-x: " << cloud->points[1].x << std::endl;
   std::cout << "data1-y: " << cloud->points[1].y << std::endl;
@@ -177,7 +212,10 @@ main (int argc, char *argv[])
   for (int i = 0; i < cloud->points.size(); ++i){
     cloud->points[i].x = cloud->points[i].x - x_min;
     cloud->points[i].y = cloud->points[i].y - y_min;
-    cloud->points[i].z = cloud->points[i].z - z_min;}
+    cloud->points[i].z = cloud->points[i].z - z_min;
+    cloud_rgb->points[i].x = cloud_rgb->points[i].x - x_min;
+    cloud_rgb->points[i].y = cloud_rgb->points[i].y - y_min;
+    cloud_rgb->points[i].z = cloud_rgb->points[i].z - z_min;}
  
   //float d = 0.15; //cylinder lay thinkness
   int layer_number = int(ceil(tree_height/(res_upper-res_lower)));
@@ -230,6 +268,8 @@ main (int argc, char *argv[])
       point.x = cloud->points[i].x;
       point.y = cloud->points[i].y;
       point.z = cloud->points[i].z;
+      //std::cout << cloud_rgb->points[i].rgb << std::endl;
+      //std::cout << *reinterpret_cast<uint32_t*>(&cloud_rgb->points[i].rgb) << std::endl;
       point.rgb = *reinterpret_cast<float*>(&rgb);
       layer_cloud_rgb->points.push_back(point);}
   layer_cloud_rgb->width = count;
@@ -240,8 +280,7 @@ main (int argc, char *argv[])
   //color cloud plot
   boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
   viewer->setBackgroundColor (0, 0, 0);
-  pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGB> rgbfield(layer_cloud_rgb);
-  viewer->addPointCloud<pcl::PointXYZRGB> (layer_cloud_rgb, rgbfield, "sample cloud");
+  viewer->addPointCloud<pcl::PointXYZRGB> (cloud_rgb, "sample cloud");
   // viewer->addPointCloud<pcl::PointXYZ> (inlier_cloud_1, "sample cloud 1");
   // viewer->addPointCloud<pcl::PointXYZ> (rest_cloud_1, "sample cloud 2");
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "sample cloud");
@@ -361,6 +400,8 @@ main (int argc, char *argv[])
 
   pcl::PointCloud<PointT>::Ptr cloud_new (new pcl::PointCloud<PointT>);
   pcl::transformPointCloud (*cloud, *cloud_new, transform_1);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb_new (new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::transformPointCloud (*cloud_rgb, *cloud_rgb_new, transform_1);
 
   //transform the starting point of the cylinder model
   pcl::PointCloud<PointT>::Ptr cyl_start_point (new pcl::PointCloud<PointT>);
@@ -393,7 +434,8 @@ main (int argc, char *argv[])
         z_max = cloud_new->points[i].z;}}
   std::cout << "z range: " << z_min << " to " << z_max << std::endl;
   for (int i = 0; i < cloud_new->points.size(); ++i){
-    cloud_new->points[i].z -= z_min;}
+    cloud_new->points[i].z -= z_min;
+    cloud_rgb_new->points[i].z -= z_min;}
 
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> transformed_cloud_color_handler_org (cloud_new, 255, 140, 0); // Orange
   viewer->addPointCloud (cloud_new, transformed_cloud_color_handler_org, "transformed_cloud_up");
@@ -419,17 +461,22 @@ main (int argc, char *argv[])
   viewer->addCylinder(*cylinder_coeff_tran, "test");
   std::cout << "after" << endl;
 
-  pcl::PointCloud<PointT>::Ptr stem_cloud (new pcl::PointCloud<PointT>);
-  pcl::PointCloud<PointT>::Ptr rest_cloud (new pcl::PointCloud<PointT>);
-  getStemPC(cloud_new, stem_cloud, rest_cloud, cylinder_coeff_tran, OFFSET);
+  //pcl::PointCloud<PointT>::Ptr stem_cloud (new pcl::PointCloud<PointT>);
+  //pcl::PointCloud<PointT>::Ptr rest_cloud (new pcl::PointCloud<PointT>);
+  //getStemPC(cloud_new, stem_cloud, rest_cloud, cylinder_coeff_tran, OFFSET);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr stem_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr rest_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
+  getStemPC_RGB(cloud_rgb_new, stem_cloud, rest_cloud, cylinder_coeff_tran, OFFSET);
   boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer_2 (new pcl::visualization::PCLVisualizer ("3D Viewer 2"));
   viewer_2->setBackgroundColor (0, 0, 0);
   viewer_2->addCoordinateSystem (1.0);
   viewer_2->addCylinder(*cylinder_coeff_tran, "test");
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> stem_cloud_handler (stem_cloud, 255, 0, 0); // Red
-  viewer_2->addPointCloud (stem_cloud, stem_cloud_handler, "stem_cloud");
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> rest_cloud_handler (stem_cloud, 0, 255, 0); // Green
-  viewer_2->addPointCloud (rest_cloud, rest_cloud_handler, "rest_cloud");
+  //pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> stem_cloud_handler (stem_cloud, 255, 0, 0); // Red
+  //viewer_2->addPointCloud (stem_cloud, stem_cloud_handler, "stem_cloud");
+  viewer_2->addPointCloud (stem_cloud, "stem_cloud");
+  //pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> rest_cloud_handler (stem_cloud, 0, 255, 0); // Green
+  //viewer_2->addPointCloud (rest_cloud, rest_cloud_handler, "rest_cloud");
+  viewer_2->addPointCloud (rest_cloud, "rest_cloud");
   std::cout << "size1: " << stem_cloud->size() << std::endl;
   std::cout << "size2: " << rest_cloud->size() << std::endl;
 
