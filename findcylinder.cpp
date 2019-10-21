@@ -161,8 +161,8 @@ main (int argc, char *argv[])
   // Read in the cloud data
   //reader.read ("../data/rotPlant.pcd", *cloud);
   //reader.read ("../data/rotPlant.pcd", *cloud_rgb);
-  reader.read ("../data/01_D1N3_2019-05-26.pcd", *cloud);
-  reader.read ("../data/01_D1N3_2019-05-26.pcd", *cloud_rgb);
+  reader.read ("../data/01_D1N3_2019-05-27.pcd", *cloud);
+  reader.read ("../data/01_D1N3_2019-05-27.pcd", *cloud_rgb);
   std::cerr << "Input PointCloud has: " << cloud->points.size () << " data points." << std::endl;
   std::cout << "data1-x: " << cloud->points[1].x << std::endl;
   std::cout << "data1-y: " << cloud->points[1].y << std::endl;
