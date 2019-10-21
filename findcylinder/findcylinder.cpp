@@ -159,10 +159,10 @@ main (int argc, char *argv[])
   pcl::PointXYZ basic_point;
   pcl::PointXYZRGB point;
   // Read in the cloud data
-  //reader.read ("../data/rotPlant.pcd", *cloud);
-  //reader.read ("../data/rotPlant.pcd", *cloud_rgb);
-  reader.read ("../data/01_D1N3_2019-05-27.pcd", *cloud);
-  reader.read ("../data/01_D1N3_2019-05-27.pcd", *cloud_rgb);
+  reader.read ("../../data/rotPlant.pcd", *cloud);
+  reader.read ("../../data/rotPlant.pcd", *cloud_rgb);
+  //reader.read ("../data/01_D1N3_2019-05-27.pcd", *cloud);
+  //reader.read ("../data/01_D1N3_2019-05-27.pcd", *cloud_rgb);
   std::cerr << "Input PointCloud has: " << cloud->points.size () << " data points." << std::endl;
   std::cout << "data1-x: " << cloud->points[1].x << std::endl;
   std::cout << "data1-y: " << cloud->points[1].y << std::endl;
@@ -232,11 +232,10 @@ main (int argc, char *argv[])
   seg_1.setOptimizeCoefficients (true);
   seg_1.setModelType (pcl::SACMODEL_CYLINDER);
   seg_1.setMethodType (pcl::SAC_RANSAC);
-  seg_1.setNormalDistanceWeight (0.1);//0.1
-  seg_1.setMaxIterations (10000); //10000
-  seg_1.setDistanceThreshold (0.04);
-  seg_1.setRadiusLimits (trunkradiuslimitlower, trunkradiuslimitupper); //(0, 0.1)//(0.03, )
-  //seg_1.setRadiusLimits (0.05, 0.06);
+  seg_1.setNormalDistanceWeight (0.1);
+  seg_1.setMaxIterations (10000);
+  seg_1.setDistanceThreshold (0); // 0.04
+  seg_1.setRadiusLimits (trunkradiuslimitlower, trunkradiuslimitupper);
   seg_1.setInputCloud (cloud);
   seg_1.setInputNormals (cloud_normals_1);
 
@@ -441,7 +440,7 @@ main (int argc, char *argv[])
   viewer->addPointCloud (cloud_new, transformed_cloud_color_handler_org, "transformed_cloud_up");
 
   //Saved the final pcd file
-  writer.write("rotPlant_reorientated.pcd", *cloud_new, false);
+  writer.write("rotPlant_preprocessed.pcd", *cloud_new, false);
 
   //get PC of the stem
   std::cout << "1" << std::endl;
@@ -482,8 +481,8 @@ main (int argc, char *argv[])
 
   //viewer->addPointCloudNormals<pcl::PointXYZ, pcl::Normal> (layer_cloud, cloud_normals_1, 10, 0.05, "normals");
 
-  writer.write("leaf_cloud.pcd", *stem_cloud, false);
-  writer.write("stem_cloud.pcd", *rest_cloud, false);
+  //writer.write("leaf_cloud.pcd", *stem_cloud, false);
+  //writer.write("stem_cloud.pcd", *rest_cloud, false);
 
 
 
