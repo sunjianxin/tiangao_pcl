@@ -4,6 +4,7 @@ This is a C++ project for automatic feature extraction from point clouds of plan
 
 Build
 ```
+#cd findcylinder_2
 #mkdir build
 #cd build
 #cmake ..
@@ -11,5 +12,5 @@ Build
 ```
 Run
 ```
-#./findcylinder 0.2 0.3 0.0001 0.03
+#./findcylinder_v2/build/findcylinder 0.0001 0.03
 ```
