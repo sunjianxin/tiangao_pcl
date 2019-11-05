@@ -27,7 +27,7 @@ void getStemPC(pcl::PointCloud<PointT>::Ptr org_cloud,
                pcl::PointCloud<PointT>::Ptr stem_cloud,
                pcl::PointCloud<PointT>::Ptr rest_cloud,
                pcl::ModelCoefficients::Ptr coefficients_cylinder,
-               float offset) {
+               float offset_ratio) {
     int count_stem = 0;
     int count_rest = 0;
     for (int i = 0; i < org_cloud->points.size(); ++i){
@@ -39,7 +39,7 @@ void getStemPC(pcl::PointCloud<PointT>::Ptr org_cloud,
                                   coefficients_cylinder->values[2],
                                   coefficients_cylinder->values[3],
                                   coefficients_cylinder->values[4],
-                                  coefficients_cylinder->values[5]) > (coefficients_cylinder->values[6] + offset)){
+                                  coefficients_cylinder->values[5]) > (coefficients_cylinder->values[6] * offset_ratio)){
             stem_cloud->points.push_back(org_cloud->points[i]);
             count_stem ++;
         } else {
@@ -61,7 +61,7 @@ void getStemPC_RGB(pcl::PointCloud<pcl::PointXYZRGB>::Ptr org_cloud,
                    pcl::PointCloud<pcl::PointXYZRGB>::Ptr stem_cloud,
                    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rest_cloud,
                    pcl::ModelCoefficients::Ptr coefficients_cylinder,
-                   float offset) {
+                   float offset_ratio) {
     int count_stem = 0;
     int count_rest = 0;
     for (int i = 0; i < org_cloud->points.size(); ++i){
@@ -73,7 +73,7 @@ void getStemPC_RGB(pcl::PointCloud<pcl::PointXYZRGB>::Ptr org_cloud,
                                   coefficients_cylinder->values[2],
                                   coefficients_cylinder->values[3],
                                   coefficients_cylinder->values[4],
-                                  coefficients_cylinder->values[5]) > (coefficients_cylinder->values[6] + offset)){
+                                  coefficients_cylinder->values[5]) > (coefficients_cylinder->values[6] * offset_ratio)){
             stem_cloud->points.push_back(org_cloud->points[i]);
             count_stem ++;
         } else {

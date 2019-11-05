@@ -21,7 +21,7 @@
 
 #include "functions.hpp"
 
-#define OFFSET 0.04
+//#define OFFSET 0.04
 
 using namespace std;
 
@@ -33,6 +33,10 @@ main (int argc, char *argv[])
     trunkradiuslimitlower = atof(argv[1]);
     float trunkradiuslimitupper;
     trunkradiuslimitupper = atof(argv[2]);
+    float offset_ratio;
+    offset_ratio = atof(argv[3]);
+    float radius;
+    radius = atof(argv[4]);
     // All the objects needed
     pcl::PCDReader reader;
     pcl::PCDWriter writer;
@@ -56,10 +60,12 @@ main (int argc, char *argv[])
     pcl::PointXYZ basic_point;
     pcl::PointXYZRGB point;
     // Read in the cloud data
-    reader.read ("../../data/rotPlant_new.pcd", *cloud);
-    reader.read ("../../data/rotPlant_new.pcd", *cloud_rgb);
-    //reader.read ("../data/01_D1N3_2019-05-27.pcd", *cloud);
-    //reader.read ("../data/01_D1N3_2019-05-27.pcd", *cloud_rgb);
+    //reader.read ("../../data/rotPlant_new.pcd", *cloud);
+    //reader.read ("../../data/rotPlant_new.pcd", *cloud_rgb);
+    reader.read (argv[5], *cloud);
+    reader.read (argv[5], *cloud_rgb);
+    //reader.read ("../../data/01_D1N3_2019-05-29.pcd", *cloud);
+    //reader.read ("../../data/01_D1N3_2019-05-29.pcd", *cloud_rgb);
     std::cerr << "Input PointCloud has: " << cloud->points.size () << " data points." << std::endl;
     //std::cout << "data1-x: " << cloud->points[1].x << std::endl;
     //std::cout << "data1-y: " << cloud->points[1].y << std::endl;
@@ -68,7 +74,8 @@ main (int argc, char *argv[])
     // Shift point cloud to the center of coordinate system
     shiftPC2Center(cloud, cloud_rgb);
     // Extract a new cylinder-shaped point cloud around the stem
-    pcl::PointCloud<PointT>::Ptr rough_stem_cloud = getRoughStemPC(cloud, 0.25);
+    pcl::PointCloud<PointT>::Ptr rough_stem_cloud = getRoughStemPC(cloud, radius);
+    //pcl::PointCloud<PointT>::Ptr rough_stem_cloud = getRoughStemPC(cloud, 0.25);
     pcl::PointCloud<PointT>::Ptr rough_stem_cloud_2 = getRoughStemPC(cloud, 1);
 
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer_0 (new pcl::visualization::PCLVisualizer ("3D Viewer"));
@@ -264,18 +271,15 @@ main (int argc, char *argv[])
     cylinder_coeff_tran->values[3] = 0;
     cylinder_coeff_tran->values[4] = 0;
     cylinder_coeff_tran->values[5] = 1;
-    cylinder_coeff_tran->values[6] = 0.01;
+    cylinder_coeff_tran->values[6] = coefficients_cylinder_1->values[6];
     
     std::cout << "before" << endl;
     viewer->addCylinder(*cylinder_coeff_tran, "test");
     std::cout << "after" << endl;
 
-    //pcl::PointCloud<PointT>::Ptr stem_cloud (new pcl::PointCloud<PointT>);
-    //pcl::PointCloud<PointT>::Ptr rest_cloud (new pcl::PointCloud<PointT>);
-    //getStemPC(cloud_new, stem_cloud, rest_cloud, cylinder_coeff_tran, OFFSET);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr stem_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr rest_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
-    getStemPC_RGB(cloud_rgb_new, stem_cloud, rest_cloud, cylinder_coeff_tran, OFFSET);
+    getStemPC_RGB(cloud_rgb_new, stem_cloud, rest_cloud, cylinder_coeff_tran, offset_ratio);
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer_2 (new pcl::visualization::PCLVisualizer ("3D Viewer 2"));
     viewer_2->setBackgroundColor (0, 0, 0);
     viewer_2->addCoordinateSystem (1.0);
